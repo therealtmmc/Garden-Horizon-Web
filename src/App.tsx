@@ -5,6 +5,7 @@
 import React, { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { Calculator } from './components/Calculator';
+import { Footer } from './components/Footer';
 import { LoadingScreen } from './components/LoadingScreen';
 import { AnimatePresence, motion } from 'motion/react';
 
@@ -45,6 +46,7 @@ export default function App() {
           <main className="container mx-auto px-4 mt-8">
             <Calculator />
           </main>
+          <Footer />
         </motion.div>
       )}
     </>
