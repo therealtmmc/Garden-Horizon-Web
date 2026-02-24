@@ -1,0 +1,24 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Fredoka", sans-serif;
+  --font-body: "Fredoka", sans-serif;
+
+  --color-farm-green: #46a055;
+  --color-farm-dark-green: #2d6a36;
+  --color-farm-brown: #8b5a2b;
+  --color-farm-light-brown: #d4a373;
+  --color-sky-blue: #87ceeb;
+  --color-sun-yellow: #ffdd57;
+  --color-kahoot-purple: #46178f;
+  --color-kahoot-blue: #1368ce;
+  --color-kahoot-red: #e21b3c;
+  --color-kahoot-yellow: #ffa602;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: #f0fdf4;
+  background-image: radial-gradient(#46a055 1px, transparent 1px);
+  background-size: 20px 20px;
+}
