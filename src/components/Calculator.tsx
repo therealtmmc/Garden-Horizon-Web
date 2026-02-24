@@ -68,12 +68,28 @@ const AVAILABLE_MULTIPLIERS: Omit<Multiplier, 'id'>[] = [
 ];
 
 export function Calculator() {
-  const [plants, setPlants] = useState<Plant[]>([]);
+  const [plants, setPlants] = useState<Plant[]>(() => {
+    const saved = localStorage.getItem('garden-horizon-plants');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Failed to parse saved plants", e);
+        return [];
+      }
+    }
+    return [];
+  });
   const [selectedPlantName, setSelectedPlantName] = useState('');
   const [inputWeight, setInputWeight] = useState('');
   const [selectedMultipliers, setSelectedMultipliers] = useState<Multiplier[]>([]);
   const [activeMultiplierId, setActiveMultiplierId] = useState('');
   const [isCalculating, setIsCalculating] = useState(false);
+
+  // Save to localStorage whenever plants change
+  React.useEffect(() => {
+    localStorage.setItem('garden-horizon-plants', JSON.stringify(plants));
+  }, [plants]);
 
   const selectedPlantData = useMemo(() => 
     PREDEFINED_PLANTS.find(p => p.name === selectedPlantName),
