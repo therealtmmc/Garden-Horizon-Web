@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Calculator as CalcIcon, Plus, Trash2, Coins, Scale, Sprout, ChevronDown, X, Zap, CloudRain, Snowflake, Wind, Droplets, Star, Award, Leaf, Loader2 } from 'lucide-react';
+import { Calculator as CalcIcon, Plus, Trash2, Coins, Scale, Sprout, ChevronDown, X, Zap, CloudRain, Snowflake, Wind, Droplets, Star, Award, Leaf, Loader2, CheckCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface Plant {
@@ -17,6 +17,12 @@ interface Multiplier {
   name: string;
   value: number;
   emoji: string;
+}
+
+interface Toast {
+  id: string;
+  message: string;
+  type: 'success' | 'error';
 }
 
 const PREDEFINED_PLANTS = [
@@ -85,6 +91,7 @@ export function Calculator() {
   const [selectedMultipliers, setSelectedMultipliers] = useState<Multiplier[]>([]);
   const [activeMultiplierId, setActiveMultiplierId] = useState('');
   const [isCalculating, setIsCalculating] = useState(false);
+  const [toasts, setToasts] = useState<Toast[]>([]);
 
   // Save to localStorage whenever plants change
   React.useEffect(() => {
@@ -95,6 +102,14 @@ export function Calculator() {
     PREDEFINED_PLANTS.find(p => p.name === selectedPlantName),
     [selectedPlantName]
   );
+
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    const id = crypto.randomUUID();
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 3000);
+  };
 
   const handlePlantChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedPlantName(e.target.value);
@@ -148,6 +163,7 @@ export function Calculator() {
 
       // Add to beginning of list so user sees it immediately
       setPlants(prev => [newPlant, ...prev]);
+      showToast(`Harvested ${newPlant.name}!`, 'success');
       
       // Reset form
       setSelectedPlantName('');
@@ -158,13 +174,42 @@ export function Calculator() {
   };
 
   const removePlantFromList = (id: string) => {
+    const plantToRemove = plants.find(p => p.id === id);
+    if (plantToRemove) {
+      showToast(`Removed ${plantToRemove.name}`, 'error');
+    }
     setPlants(plants.filter(p => p.id !== id));
   };
 
   const currentCalculatedValue = calculateCurrentValue();
 
   return (
-    <div className="w-full max-w-5xl mx-auto p-4 space-y-8">
+    <div className="w-full max-w-5xl mx-auto p-4 space-y-8 relative">
+      {/* Toasts Container */}
+      <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none">
+        <AnimatePresence>
+          {toasts.map(toast => (
+            <motion.div
+              key={toast.id}
+              initial={{ opacity: 0, x: 50, scale: 0.8 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8, x: 20, transition: { duration: 0.2 } }}
+              layout
+              className={`pointer-events-auto flex items-center gap-3 px-5 py-4 rounded-2xl shadow-[0_8px_16px_rgba(0,0,0,0.15)] font-bold text-white min-w-[200px] border-b-4 ${
+                toast.type === 'success' 
+                  ? 'bg-farm-green border-farm-dark-green' 
+                  : 'bg-kahoot-red border-red-700'
+              }`}
+            >
+              <div className="bg-white/20 p-1 rounded-full">
+                {toast.type === 'success' ? <CheckCircle size={20} strokeWidth={3} /> : <Trash2 size={20} strokeWidth={3} />}
+              </div>
+              <span className="drop-shadow-sm">{toast.message}</span>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+
       {/* Calculator Section */}
       <div className="bg-white border-4 border-kahoot-blue rounded-3xl p-6 shadow-[0_8px_0_#0f52ba]">
         <h2 className="text-2xl font-bold text-kahoot-blue mb-6 flex items-center gap-2">
@@ -341,10 +386,10 @@ export function Calculator() {
               <motion.div
                 layout
                 key={plant.id}
-                initial={{ opacity: 0, scale: 0.8, y: 50 }}
+                initial={{ opacity: 0, scale: 0.5, y: 50 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
-                transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                transition={{ type: "spring", stiffness: 400, damping: 20 }}
                 className="bg-white border-4 border-kahoot-purple rounded-3xl p-4 shadow-[0_6px_0_#34116b] relative group"
               >
                 <button
