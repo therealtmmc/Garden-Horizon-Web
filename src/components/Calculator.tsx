@@ -87,7 +87,6 @@ export function Calculator() {
     return [];
   });
   const [selectedPlantName, setSelectedPlantName] = useState('');
-  const [inputWeight, setInputWeight] = useState('');
   const [selectedMultipliers, setSelectedMultipliers] = useState<Multiplier[]>([]);
   const [activeMultiplierId, setActiveMultiplierId] = useState('');
   const [isCalculating, setIsCalculating] = useState(false);
@@ -129,21 +128,18 @@ export function Calculator() {
   };
 
   const calculateCurrentValue = () => {
-    if (!selectedPlantData || !inputWeight) return 0;
-    const weight = parseFloat(inputWeight);
-    if (isNaN(weight)) return 0;
+    if (!selectedPlantData) return 0;
 
-    // Formula: basePrice * (weight / baseWeight) ^ 2 * totalMutationMultiplier
-    const weightRatio = weight / selectedPlantData.weight;
+    // Formula: basePrice * totalMutationMultiplier (assuming standard base weight)
     const totalMultiplier = selectedMultipliers.reduce((acc, curr) => acc * curr.value, 1);
     
-    const value = selectedPlantData.price * Math.pow(weightRatio, 2) * totalMultiplier;
+    const value = selectedPlantData.price * totalMultiplier;
     
     return value;
   };
 
   const addPlantToList = () => {
-    if (!selectedPlantData || !inputWeight) return;
+    if (!selectedPlantData) return;
     
     setIsCalculating(true);
 
@@ -154,7 +150,7 @@ export function Calculator() {
       const newPlant: Plant = {
         id: crypto.randomUUID(),
         name: selectedPlantData.name,
-        weight: parseFloat(inputWeight),
+        weight: selectedPlantData.weight, // Default to base weight
         baseWeight: selectedPlantData.weight,
         basePrice: selectedPlantData.price,
         multipliers: [...selectedMultipliers],
@@ -167,7 +163,6 @@ export function Calculator() {
       
       // Reset form
       setSelectedPlantName('');
-      setInputWeight('');
       setSelectedMultipliers([]);
       setIsCalculating(false);
     }, 600);
@@ -241,21 +236,25 @@ export function Calculator() {
                 </div>
               </div>
 
-              {/* Weight Input */}
-              <div>
-                <label className="block text-gray-500 font-bold mb-2 ml-1">Actual Weight (kg)</label>
-                <div className="relative">
-                  <Scale className="absolute left-3 top-3.5 text-gray-400 w-5 h-5" />
-                  <input
-                    type="number"
-                    value={inputWeight}
-                    onChange={(e) => setInputWeight(e.target.value)}
-                    placeholder={selectedPlantData ? `Base: ${selectedPlantData.weight}kg` : "0.0"}
-                    step="0.01"
-                    className="w-full bg-gray-100 border-2 border-gray-300 rounded-xl pl-10 pr-4 py-3 font-bold text-gray-700 focus:outline-none focus:border-kahoot-blue focus:ring-4 focus:ring-kahoot-blue/20 transition-all"
-                  />
+              {/* Base Stats Display */}
+              {selectedPlantData && (
+                <div className="md:col-span-2 grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div className="bg-gray-100 rounded-xl p-3 border-2 border-gray-200 flex flex-col items-center justify-center text-center">
+                    <span className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Base Weight</span>
+                    <span className="text-xl font-black text-gray-700 flex items-center gap-1">
+                      <Scale className="w-4 h-4 text-gray-400" />
+                      {selectedPlantData.weight}kg
+                    </span>
+                  </div>
+                  <div className="bg-gray-100 rounded-xl p-3 border-2 border-gray-200 flex flex-col items-center justify-center text-center">
+                    <span className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Base Price</span>
+                    <span className="text-xl font-black text-gray-700 flex items-center gap-1">
+                      <Coins className="w-4 h-4 text-gray-400" />
+                      ${selectedPlantData.price}
+                    </span>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Multipliers Selection */}
@@ -324,10 +323,10 @@ export function Calculator() {
               
               <div className="space-y-4">
                 <div className="flex justify-between items-center text-gray-600 font-medium">
-                  <span>Base Value:</span>
+                  <span>Base Price:</span>
                   <span>
-                    {selectedPlantData && inputWeight 
-                      ? `$${((parseFloat(inputWeight) / selectedPlantData.weight) * selectedPlantData.price).toFixed(2)}` 
+                    {selectedPlantData 
+                      ? `$${selectedPlantData.price.toFixed(2)}` 
                       : '$0.00'}
                   </span>
                 </div>
@@ -348,9 +347,9 @@ export function Calculator() {
 
             <button
               onClick={addPlantToList}
-              disabled={!selectedPlantData || !inputWeight || isCalculating}
+              disabled={!selectedPlantData || isCalculating}
               className={`w-full mt-6 font-bold py-4 px-6 rounded-xl border-b-4 transition-all flex items-center justify-center gap-2 text-lg ${
-                selectedPlantData && inputWeight && !isCalculating
+                selectedPlantData && !isCalculating
                   ? 'bg-farm-green hover:bg-green-500 text-white border-farm-dark-green active:border-b-0 active:translate-y-1 shadow-lg shadow-green-200' 
                   : 'bg-gray-300 text-gray-500 border-gray-400 cursor-not-allowed'
               }`}
