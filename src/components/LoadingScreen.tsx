@@ -34,7 +34,7 @@ export function LoadingScreen() {
         transition={{ delay: 0.3 }}
         className="mt-8 flex flex-col items-center gap-4"
       >
-        <h1 className="text-2xl md:text-4xl font-display font-black text-farm-dark-green tracking-wider uppercase drop-shadow-sm text-center px-4">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-display font-black text-farm-dark-green tracking-wider uppercase drop-shadow-sm text-center px-4">
           Garden Horizon
         </h1>
         

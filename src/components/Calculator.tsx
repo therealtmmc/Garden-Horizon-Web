@@ -87,10 +87,12 @@ export function Calculator() {
     return [];
   });
   const [selectedPlantName, setSelectedPlantName] = useState('');
+  const [inputWeight, setInputWeight] = useState('');
   const [selectedMultipliers, setSelectedMultipliers] = useState<Multiplier[]>([]);
   const [activeMultiplierId, setActiveMultiplierId] = useState('');
   const [isCalculating, setIsCalculating] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [showSellConfirm, setShowSellConfirm] = useState(false);
 
   // Save to localStorage whenever plants change
   React.useEffect(() => {
@@ -107,7 +109,14 @@ export function Calculator() {
     setToasts(prev => [...prev, { id, message, type }]);
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id));
-    }, 3000);
+    }, 2000);
+  };
+
+  const handleSellAll = () => {
+    const total = plants.reduce((acc, p) => acc + p.finalValue, 0);
+    setPlants([]);
+    setShowSellConfirm(false);
+    showToast(`Sold all plants for $${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}!`, 'success');
   };
 
   const handlePlantChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -129,11 +138,20 @@ export function Calculator() {
 
   const calculateCurrentValue = () => {
     if (!selectedPlantData) return 0;
+    
+    let weight: number;
+    if (!inputWeight) {
+      weight = selectedPlantData.weight;
+    } else {
+      weight = parseFloat(inputWeight);
+      if (isNaN(weight)) return 0;
+    }
 
-    // Formula: basePrice * totalMutationMultiplier (assuming standard base weight)
+    // Formula: basePrice * (weight / baseWeight) ^ 2 * totalMutationMultiplier
+    const weightRatio = weight / selectedPlantData.weight;
     const totalMultiplier = selectedMultipliers.reduce((acc, curr) => acc * curr.value, 1);
     
-    const value = selectedPlantData.price * totalMultiplier;
+    const value = selectedPlantData.price * Math.pow(weightRatio, 2) * totalMultiplier;
     
     return value;
   };
@@ -146,11 +164,12 @@ export function Calculator() {
     // Simulate calculation delay for effect
     setTimeout(() => {
       const finalValue = calculateCurrentValue();
+      const weightToUse = inputWeight ? parseFloat(inputWeight) : selectedPlantData.weight;
       
       const newPlant: Plant = {
         id: crypto.randomUUID(),
         name: selectedPlantData.name,
-        weight: selectedPlantData.weight, // Default to base weight
+        weight: weightToUse,
         baseWeight: selectedPlantData.weight,
         basePrice: selectedPlantData.price,
         multipliers: [...selectedMultipliers],
@@ -163,6 +182,7 @@ export function Calculator() {
       
       // Reset form
       setSelectedPlantName('');
+      setInputWeight('');
       setSelectedMultipliers([]);
       setIsCalculating(false);
     }, 600);
@@ -180,26 +200,69 @@ export function Calculator() {
 
   return (
     <div className="w-full max-w-5xl mx-auto p-4 space-y-8 relative">
+      {/* Sell All Confirmation Modal */}
+      <AnimatePresence>
+        {showSellConfirm && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+              onClick={() => setShowSellConfirm(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.8, y: 20 }}
+              className="bg-white rounded-3xl p-8 shadow-2xl w-full max-w-md relative z-10 border-4 border-kahoot-blue text-center"
+            >
+              <div className="bg-kahoot-yellow/20 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Coins className="w-10 h-10 text-kahoot-yellow" />
+              </div>
+              <h3 className="text-2xl font-black text-gray-800 mb-2">Sell All Plants?</h3>
+              <p className="text-gray-500 font-medium mb-8">
+                Are you sure you want to sell your entire harvest? This action cannot be undone.
+              </p>
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setShowSellConfirm(false)}
+                  className="flex-1 font-bold py-3 px-6 rounded-xl border-2 border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSellAll}
+                  className="flex-1 bg-kahoot-blue hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-xl border-b-4 border-blue-800 active:border-b-0 active:translate-y-1 transition-all shadow-lg shadow-blue-200"
+                >
+                  Yes, Sell All
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Toasts Container */}
-      <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none">
-        <AnimatePresence>
+      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center pointer-events-none p-4 gap-4">
+        <AnimatePresence mode="popLayout">
           {toasts.map(toast => (
             <motion.div
               key={toast.id}
-              initial={{ opacity: 0, x: 50, scale: 0.8 }}
-              animate={{ opacity: 1, x: 0, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8, x: 20, transition: { duration: 0.2 } }}
+              initial={{ opacity: 0, scale: 0.5, y: 50 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
               layout
-              className={`pointer-events-auto flex items-center gap-3 px-5 py-4 rounded-2xl shadow-[0_8px_16px_rgba(0,0,0,0.15)] font-bold text-white min-w-[200px] border-b-4 ${
+              className={`pointer-events-auto flex flex-col items-center justify-center gap-3 px-8 py-6 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.25)] font-black text-xl text-white min-w-[300px] max-w-[90vw] text-center border-b-8 transform hover:scale-105 transition-transform ${
                 toast.type === 'success' 
                   ? 'bg-farm-green border-farm-dark-green' 
-                  : 'bg-kahoot-red border-red-700'
+                  : 'bg-kahoot-red border-red-900'
               }`}
             >
-              <div className="bg-white/20 p-1 rounded-full">
-                {toast.type === 'success' ? <CheckCircle size={20} strokeWidth={3} /> : <Trash2 size={20} strokeWidth={3} />}
+              <div className="bg-white/20 p-3 rounded-full animate-[bounce_1s_infinite]">
+                {toast.type === 'success' ? <CheckCircle size={32} strokeWidth={4} /> : <Trash2 size={32} strokeWidth={4} />}
               </div>
-              <span className="drop-shadow-sm">{toast.message}</span>
+              <span className="drop-shadow-md">{toast.message}</span>
             </motion.div>
           ))}
         </AnimatePresence>
@@ -236,25 +299,27 @@ export function Calculator() {
                 </div>
               </div>
 
-              {/* Base Stats Display */}
-              {selectedPlantData && (
-                <div className="md:col-span-2 grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                  <div className="bg-gray-100 rounded-xl p-3 border-2 border-gray-200 flex flex-col items-center justify-center text-center">
-                    <span className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Base Weight</span>
-                    <span className="text-xl font-black text-gray-700 flex items-center gap-1">
-                      <Scale className="w-4 h-4 text-gray-400" />
-                      {selectedPlantData.weight}kg
-                    </span>
-                  </div>
-                  <div className="bg-gray-100 rounded-xl p-3 border-2 border-gray-200 flex flex-col items-center justify-center text-center">
-                    <span className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Base Price</span>
-                    <span className="text-xl font-black text-gray-700 flex items-center gap-1">
-                      <Coins className="w-4 h-4 text-gray-400" />
-                      ${selectedPlantData.price}
-                    </span>
-                  </div>
+              {/* Weight Input */}
+              <div>
+                <label className="block text-gray-500 font-bold mb-2 ml-1">Actual Weight (kg)</label>
+                <div className="relative">
+                  <Scale className="absolute left-3 top-3.5 text-gray-400 w-5 h-5" />
+                  <input
+                    type="number"
+                    value={inputWeight}
+                    onChange={(e) => setInputWeight(e.target.value)}
+                    placeholder={selectedPlantData ? `Base: ${selectedPlantData.weight}kg` : "0.0"}
+                    step="0.01"
+                    className="w-full bg-gray-100 border-2 border-gray-300 rounded-xl pl-10 pr-4 py-3 font-bold text-gray-700 focus:outline-none focus:border-kahoot-blue focus:ring-4 focus:ring-kahoot-blue/20 transition-all"
+                  />
                 </div>
-              )}
+                {selectedPlantData && !inputWeight && (
+                  <p className="text-xs text-kahoot-blue mt-1 ml-1 font-medium flex items-center gap-1">
+                    <Zap className="w-3 h-3" />
+                    Using base weight ({selectedPlantData.weight}kg)
+                  </p>
+                )}
+              </div>
             </div>
 
             {/* Multipliers Selection */}
@@ -323,10 +388,10 @@ export function Calculator() {
               
               <div className="space-y-4">
                 <div className="flex justify-between items-center text-gray-600 font-medium">
-                  <span>Base Price:</span>
+                  <span>Base Value:</span>
                   <span>
                     {selectedPlantData 
-                      ? `$${selectedPlantData.price.toFixed(2)}` 
+                      ? `$${(( (inputWeight ? parseFloat(inputWeight) : selectedPlantData.weight) / selectedPlantData.weight) * selectedPlantData.price).toFixed(2)}` 
                       : '$0.00'}
                   </span>
                 </div>
@@ -374,10 +439,31 @@ export function Calculator() {
 
       {/* Results List */}
       <div className="space-y-4">
-        <h3 className="text-xl font-bold text-gray-700 ml-2 flex items-center gap-2">
-          <Sprout className="w-6 h-6" />
-          Harvest History
-        </h3>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
+          <h3 className="text-xl font-bold text-gray-700 ml-2 flex items-center gap-2">
+            <Sprout className="w-6 h-6" />
+            Harvest History
+          </h3>
+          
+          {plants.length > 0 && (
+            <div className="flex flex-col sm:flex-row items-end sm:items-center gap-4 w-full sm:w-auto">
+              <div className="text-right bg-white px-4 py-2 rounded-xl border-2 border-gray-100 shadow-sm">
+                <span className="block text-xs font-bold text-gray-400 uppercase tracking-wider">Total Value</span>
+                <span className="text-2xl font-black text-kahoot-purple">
+                  ${plants.reduce((acc, p) => acc + p.finalValue, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+              
+              <button
+                onClick={() => setShowSellConfirm(true)}
+                className="bg-kahoot-red hover:bg-red-600 text-white font-bold py-2 px-4 rounded-xl border-b-4 border-red-800 active:border-b-0 active:translate-y-1 transition-all flex items-center gap-2 shadow-sm whitespace-nowrap"
+              >
+                <Coins className="w-5 h-5" />
+                Sell All
+              </button>
+            </div>
+          )}
+        </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           <AnimatePresence mode='popLayout'>
@@ -393,7 +479,7 @@ export function Calculator() {
               >
                 <button
                   onClick={() => removePlantFromList(plant.id)}
-                  className="absolute -top-3 -right-3 bg-kahoot-red text-white p-2 rounded-full shadow-md hover:scale-110 transition-transform opacity-0 group-hover:opacity-100 z-10"
+                  className="absolute -top-3 -right-3 bg-kahoot-red text-white p-2 rounded-full shadow-md hover:scale-110 transition-transform z-10 border-2 border-white"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>

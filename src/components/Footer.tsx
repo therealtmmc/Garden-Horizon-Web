@@ -55,6 +55,12 @@ export function Footer() {
           <span className="font-bold text-gray-600 group-hover:text-[#5865F2]">Discord</span>
         </a>
       </div>
+      
+      <div className="mt-4 text-center">
+        <p className="text-gray-400 text-sm font-bold tracking-wide">
+          Created by <a href="https://www.roblox.com/users/3153827517/profile" target="_blank" rel="noopener noreferrer" className="text-kahoot-purple hover:underline hover:text-kahoot-blue transition-colors">Hellson_Gamings</a>
+        </p>
+      </div>
     </footer>
   );
 }
