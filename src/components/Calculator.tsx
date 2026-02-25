@@ -172,7 +172,23 @@ export function Calculator() {
 
     // Formula: basePrice * (weight / baseWeight) ^ 2 * totalMutationMultiplier
     const weightRatio = weight / selectedPlantData.weight;
-    const totalMultiplier = selectedMultipliers.reduce((acc, curr) => acc * curr.value, 1);
+    
+    // Separate additive and multiplicative multipliers
+    const ADDITIVE_MULTIPLIERS = ["Gold", "Silver", "Lush", "Ripened", "Unripe"];
+    
+    const additiveMultipliers = selectedMultipliers.filter(m => ADDITIVE_MULTIPLIERS.includes(m.name));
+    const multiplicativeMultipliers = selectedMultipliers.filter(m => !ADDITIVE_MULTIPLIERS.includes(m.name));
+    
+    // Calculate additive sum (default to 1 if none)
+    // If there are additive multipliers, we sum their values.
+    // Assuming the user means these values stack additively (e.g. 5x + 2x = 7x)
+    let additiveSum = additiveMultipliers.reduce((sum, m) => sum + m.value, 0);
+    if (additiveSum === 0) additiveSum = 1;
+    
+    // Calculate multiplicative product
+    const multiplicativeProduct = multiplicativeMultipliers.reduce((prod, m) => prod * m.value, 1);
+    
+    const totalMultiplier = additiveSum * multiplicativeProduct;
     
     const value = selectedPlantData.price * Math.pow(weightRatio, 2) * totalMultiplier;
     
@@ -455,7 +471,17 @@ export function Calculator() {
                 <div className="flex justify-between items-center text-gray-600 font-medium">
                   <span>Total Multiplier:</span>
                   <span className="bg-kahoot-yellow/20 text-kahoot-yellow px-2 py-0.5 rounded text-sm font-bold border border-kahoot-yellow/30">
-                    x{selectedMultipliers.reduce((acc, curr) => acc * curr.value, 1).toFixed(2)}
+                    x{(() => {
+                      const ADDITIVE_MULTIPLIERS = ["Gold", "Silver", "Lush", "Ripened", "Unripe"];
+                      const additiveMultipliers = selectedMultipliers.filter(m => ADDITIVE_MULTIPLIERS.includes(m.name));
+                      const multiplicativeMultipliers = selectedMultipliers.filter(m => !ADDITIVE_MULTIPLIERS.includes(m.name));
+                      
+                      let additiveSum = additiveMultipliers.reduce((sum, m) => sum + m.value, 0);
+                      if (additiveSum === 0) additiveSum = 1;
+                      
+                      const multiplicativeProduct = multiplicativeMultipliers.reduce((prod, m) => prod * m.value, 1);
+                      return (additiveSum * multiplicativeProduct).toFixed(2);
+                    })()}
                   </span>
                 </div>
                 <div className="h-px bg-gray-300 my-2"></div>
