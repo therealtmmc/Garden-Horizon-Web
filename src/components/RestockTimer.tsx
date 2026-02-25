@@ -6,13 +6,14 @@ export function RestockTimer() {
   const [timeLeft, setTimeLeft] = useState('');
   const [progress, setProgress] = useState(0);
   const [showRestockPopup, setShowRestockPopup] = useState(false);
+  const [permission, setPermission] = useState<NotificationPermission>('default');
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastTriggeredTime = useRef<number>(0);
 
   useEffect(() => {
-    // Request notification permission on mount
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
+    // Check initial permission
+    if ('Notification' in window) {
+      setPermission(Notification.permission);
     }
 
     // Initialize audio
@@ -90,9 +91,16 @@ export function RestockTimer() {
     return () => clearInterval(interval);
   }, []);
 
+  const requestPermission = () => {
+    if (!('Notification' in window)) return;
+    Notification.requestPermission().then((perm) => {
+      setPermission(perm);
+    });
+  };
+
   return (
     <>
-      <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 z-20">
+      <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1">
         <div className="bg-white border-2 border-kahoot-blue rounded-full px-4 py-1 shadow-md flex items-center gap-2 whitespace-nowrap overflow-hidden relative">
           {/* Progress Background */}
           <div 
@@ -105,6 +113,16 @@ export function RestockTimer() {
             Restock: <span className="text-kahoot-blue text-sm font-black tabular-nums">{timeLeft}</span>
           </span>
         </div>
+
+        {permission === 'default' && (
+          <button 
+            onClick={requestPermission}
+            className="bg-white/90 hover:bg-white text-kahoot-blue text-[10px] font-bold px-3 py-1 rounded-full shadow-sm border border-kahoot-blue/20 flex items-center gap-1.5 transition-all animate-bounce"
+          >
+            <Bell className="w-3 h-3" />
+            Enable Notifications
+          </button>
+        )}
       </div>
 
       {/* Restock Popup Animation */}
