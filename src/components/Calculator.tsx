@@ -73,6 +73,9 @@ const AVAILABLE_MULTIPLIERS: Omit<Multiplier, 'id'>[] = [
   { name: "Silver", value: 2.0, emoji: "🥈" },
 ];
 
+const UNRIPE_VALUES = ["1.0", "1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "1.7", "1.8", "1.9"];
+const RIPENED_VALUES = ["2.0", "2.1", "2.2", "2.3", "2.4", "2.5", "2.6", "2.7", "2.8", "2.9"];
+
 export function Calculator() {
   const [plants, setPlants] = useState<Plant[]>(() => {
     const saved = localStorage.getItem('garden-horizon-plants');
@@ -414,18 +417,24 @@ export function Calculator() {
                           {activeMultiplierId === 'Ripened' ? '🎋' : '🌱'}
                         </div>
                         <div className="flex-1">
-                          <label className="block text-xs font-bold text-gray-500 mb-1">
-                            {activeMultiplierId} Value ({activeMultiplierId === 'Ripened' ? '2.0 - 2.9' : '1.0 - 1.9'})
+                          <label className="block text-xs font-bold text-gray-500 mb-2">
+                            Select {activeMultiplierId} Value
                           </label>
-                          <input
-                            type="number"
-                            step="0.1"
-                            min={activeMultiplierId === 'Ripened' ? 2.0 : 1.0}
-                            max={activeMultiplierId === 'Ripened' ? 2.9 : 1.9}
-                            value={customMultiplierValue}
-                            onChange={(e) => setCustomMultiplierValue(e.target.value)}
-                            className="w-full bg-white border-2 border-gray-300 rounded-lg px-3 py-1.5 font-bold text-gray-700 focus:outline-none focus:border-kahoot-yellow focus:ring-2 focus:ring-kahoot-yellow/20"
-                          />
+                          <div className="grid grid-cols-5 gap-2">
+                            {(activeMultiplierId === 'Ripened' ? RIPENED_VALUES : UNRIPE_VALUES).map((val) => (
+                              <button
+                                key={val}
+                                onClick={() => setCustomMultiplierValue(val)}
+                                className={`px-1 py-1.5 rounded-lg text-xs font-bold border-2 transition-all ${
+                                  customMultiplierValue === val
+                                    ? 'bg-kahoot-yellow text-white border-kahoot-yellow shadow-sm scale-105'
+                                    : 'bg-white text-gray-600 border-gray-200 hover:border-kahoot-yellow/50 hover:bg-yellow-50'
+                                }`}
+                              >
+                                {val}x
+                              </button>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     </motion.div>
