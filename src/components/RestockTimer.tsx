@@ -7,8 +7,20 @@ export function RestockTimer() {
   const [progress, setProgress] = useState(0);
   const [showRestockPopup, setShowRestockPopup] = useState(false);
   const [permission, setPermission] = useState<NotificationPermission>('default');
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  
+  // Use Web Audio API for reliable sound generation without external files
+  const audioCtxRef = useRef<AudioContext | null>(null);
   const lastTriggeredTime = useRef<number>(0);
+  const alarmIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const dismissNotification = () => {
+    setShowRestockPopup(false);
+    // Stop the alarm loop
+    if (alarmIntervalRef.current) {
+      clearInterval(alarmIntervalRef.current);
+      alarmIntervalRef.current = null;
+    }
+  };
 
   useEffect(() => {
     // Check initial permission
@@ -16,9 +28,49 @@ export function RestockTimer() {
       setPermission(Notification.permission);
     }
 
-    // Initialize audio
-    audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/221/221-preview.mp3'); // Simple bell sound
-    audioRef.current.volume = 0.5;
+    // Initialize AudioContext
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      audioCtxRef.current = new AudioContextClass();
+    } catch (e) {
+      console.error("Web Audio API not supported", e);
+    }
+
+    // Unlock audio context on first user interaction
+    const unlockAudio = () => {
+      if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+        audioCtxRef.current.resume();
+      }
+      document.removeEventListener('click', unlockAudio);
+      document.removeEventListener('keydown', unlockAudio);
+    };
+
+    document.addEventListener('click', unlockAudio);
+    document.addEventListener('keydown', unlockAudio);
+
+    const playBellSound = () => {
+      if (!audioCtxRef.current) return;
+      const ctx = audioCtxRef.current;
+      
+      // Create oscillators for a bell-like tone
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      // Bell parameters
+      const now = ctx.currentTime;
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, now); // A5
+      osc.frequency.exponentialRampToValueAtTime(110, now + 1.5); // Pitch drop
+      
+      gain.gain.setValueAtTime(0.3, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 1.5); // Decay
+      
+      osc.start(now);
+      osc.stop(now + 1.5);
+    };
 
     const updateTimer = () => {
       const now = new Date();
@@ -65,30 +117,45 @@ export function RestockTimer() {
     const triggerRestockNotification = () => {
       setShowRestockPopup(true);
       
-      // Play sound
-      if (audioRef.current) {
-        audioRef.current.currentTime = 0;
-        audioRef.current.play().catch(e => console.log("Audio play failed:", e));
+      // Ensure AudioContext is running
+      if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+        audioCtxRef.current.resume();
       }
+
+      // Play sound immediately
+      playBellSound();
+
+      // Loop sound every 800ms
+      if (alarmIntervalRef.current) clearInterval(alarmIntervalRef.current);
+      alarmIntervalRef.current = setInterval(playBellSound, 800);
 
       // Send Browser Notification
       if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification('Garden Horizon Restock!', {
+        const notification = new Notification('Garden Horizon Restock!', {
           body: 'New plants are available in the shop now!',
-          icon: '/logo.png', // Uses the public logo if available, or fallback
-          silent: true // We play our own sound
+          icon: '/logo.png',
+          silent: true
         });
+        
+        // Close system notification after 5 seconds
+        setTimeout(() => {
+          notification.close();
+        }, 5000);
       }
 
-      // Hide popup after 5 seconds
+      // Auto-dismiss popup and stop sound after 5 seconds
       setTimeout(() => {
-        setShowRestockPopup(false);
+        dismissNotification();
       }, 5000);
     };
 
     updateTimer();
     const interval = setInterval(updateTimer, 1000);
-    return () => clearInterval(interval);
+    return () => {
+        clearInterval(interval);
+        if (alarmIntervalRef.current) clearInterval(alarmIntervalRef.current);
+        if (audioCtxRef.current) audioCtxRef.current.close();
+    };
   }, []);
 
   const requestPermission = () => {
@@ -132,7 +199,8 @@ export function RestockTimer() {
             initial={{ opacity: 0, scale: 0.5, y: -50 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.5, y: -50 }}
-            className="fixed top-24 left-1/2 -translate-x-1/2 z-[100] bg-kahoot-yellow border-4 border-yellow-600 text-white px-8 py-4 rounded-3xl shadow-[0_10px_40px_rgba(255,193,7,0.6)] flex items-center gap-4"
+            className="fixed top-24 left-1/2 -translate-x-1/2 z-[100] bg-kahoot-yellow border-4 border-yellow-600 text-white px-8 py-4 rounded-3xl shadow-[0_10px_40px_rgba(255,193,7,0.6)] flex items-center gap-4 cursor-pointer hover:scale-105 transition-transform"
+            onClick={dismissNotification}
           >
             <div className="bg-white/20 p-3 rounded-full animate-[bounce_1s_infinite]">
               <Bell className="w-8 h-8 text-white" fill="currentColor" />
