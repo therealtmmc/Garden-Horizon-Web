@@ -520,11 +520,16 @@ export function Calculator() {
               }`}
             >
               {isCalculating ? (
-                <Loader2 className="w-6 h-6 animate-spin" />
+                <>
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                  <span>Calculating...</span>
+                </>
               ) : (
-                <Plus className="w-6 h-6" />
+                <>
+                  <Plus className="w-6 h-6" />
+                  <span>Add to List</span>
+                </>
               )}
-              {isCalculating ? 'Calculating...' : 'Add to List'}
             </button>
 
             <div className="mt-4 text-xs text-gray-500 italic bg-white/50 p-3 rounded-xl border border-gray-200">
