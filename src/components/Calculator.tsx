@@ -170,83 +170,33 @@ export function Calculator() {
       if (isNaN(weight)) return 0;
     }
 
-    // Formula: basePrice * (weight / baseWeight) ^ k * totalMutationMultiplier * plantAdjustment
+    // New Unified Formula for All Plants
+    // variantTotal = 1 + lushBonus + ripenedBonus + silverBonus + goldBonus
+    // mutationTotal = 1 + shockedBonus + sandyBonus + floodedBonus + etc
+    // weightFactor = Math.pow(actualWeight / avgWeight, 2)
+    // sellPrice = basePrice * variantTotal * mutationTotal * weightFactor
+
+    const VARIANT_NAMES = ["Lush", "Ripened", "Unripe", "Gold", "Silver"];
+    
+    const variants = selectedMultipliers.filter(m => VARIANT_NAMES.includes(m.name));
+    const mutations = selectedMultipliers.filter(m => !VARIANT_NAMES.includes(m.name));
+    
+    // Calculate variantTotal (1 + sum of bonuses)
+    // Bonus is assumed to be (multiplier value - 1)
+    // e.g. Gold (5x) is a +4 bonus. 1 + 4 = 5x total.
+    const variantBonusSum = variants.reduce((sum, m) => sum + (m.value - 1), 0);
+    const variantTotal = 1 + variantBonusSum;
+    
+    // Calculate mutationTotal (1 + sum of bonuses)
+    const mutationBonusSum = mutations.reduce((sum, m) => sum + (m.value - 1), 0);
+    const mutationTotal = 1 + mutationBonusSum;
+    
+    // Calculate weightFactor
     const weightRatio = weight / selectedPlantData.weight;
+    const weightFactor = Math.pow(weightRatio, 2);
     
-    // Determine exponent k
-    // if ratio >= 1, k = 2
-    // else k = 5 (or plant-specific later)
-    const k = weightRatio >= 1 ? 2 : 5;
-
-    // Separate additive and multiplicative multipliers
-    const ADDITIVE_MULTIPLIERS = ["Gold", "Silver", "Lush", "Ripened", "Unripe"];
-    
-    const additiveMultipliers = selectedMultipliers.filter(m => ADDITIVE_MULTIPLIERS.includes(m.name));
-    const multiplicativeMultipliers = selectedMultipliers.filter(m => !ADDITIVE_MULTIPLIERS.includes(m.name));
-    
-    // Calculate additive sum (default to 1 if none)
-    let additiveSum = additiveMultipliers.reduce((sum, m) => sum + m.value, 0);
-    if (additiveSum === 0) additiveSum = 1;
-    
-    // Calculate multiplicative product
-    const multiplicativeProduct = multiplicativeMultipliers.reduce((prod, m) => prod * m.value, 1);
-    
-    const totalMultiplier = additiveSum * multiplicativeProduct;
-    
-    // Plant adjustment (default to 1 for now)
-    const plantAdjustment = 1;
-    
-    let value: number;
-
-    if (selectedPlantData.name === 'Cherry') {
-      // Special formula for Cherry: 
-      // Final Value = (Base * GrowthMultipliers) + Σ(Base * (EnvironmentalMultiplier − 1))
-      
-      // Calculate Base Value (Price adjusted by weight)
-      // The user's example used 8000 (Base Price), assuming standard weight.
-      // We use the weight-adjusted base value to support different weights.
-      const baseValue = selectedPlantData.price * Math.pow(weightRatio, k);
-
-      // Define Environmental Multipliers (Weather & Status Effects)
-      const ENVIRONMENTAL_MULTIPLIERS = [
-        "Sandy", "Snowy", "Flooded", "Chilled", "Soaked", "Foggy", 
-        "Muddy", "Frostbit", "Mossy"
-      ];
-      
-      // Separate multipliers
-      const envMultipliers = selectedMultipliers.filter(m => ENVIRONMENTAL_MULTIPLIERS.includes(m.name));
-      const growthMultipliers = selectedMultipliers.filter(m => !ENVIRONMENTAL_MULTIPLIERS.includes(m.name));
-      
-      // Calculate Growth Component
-      // Using the same Additive/Multiplicative logic for the Growth subset
-      const ADDITIVE_GROWTH = ["Gold", "Silver", "Lush", "Ripened", "Unripe"];
-      
-      const additiveGrowth = growthMultipliers.filter(m => ADDITIVE_GROWTH.includes(m.name));
-      const multiplicativeGrowth = growthMultipliers.filter(m => !ADDITIVE_GROWTH.includes(m.name));
-      
-      let growthAdditiveSum = additiveGrowth.reduce((sum, m) => sum + m.value, 0);
-      if (growthAdditiveSum === 0) growthAdditiveSum = 1;
-      
-      const growthMultiplicativeProduct = multiplicativeGrowth.reduce((prod, m) => prod * m.value, 1);
-      
-      const totalGrowthMultiplier = growthAdditiveSum * growthMultiplicativeProduct;
-      
-      const growthValue = baseValue * totalGrowthMultiplier;
-      
-      // Calculate Environmental Bonus
-      // Σ(Base * (EnvMultiplier − 1))
-      const envBonus = envMultipliers.reduce((sum, m) => {
-        return sum + (baseValue * (m.value - 1));
-      }, 0);
-      
-      value = growthValue + envBonus;
-      
-      // Ensure value doesn't drop below 0
-      if (value < 0) value = 0;
-    } else {
-      // Standard formula for other plants
-      value = selectedPlantData.price * Math.pow(weightRatio, k) * totalMultiplier * plantAdjustment;
-    }
+    // Final Sell Price
+    const value = selectedPlantData.price * variantTotal * mutationTotal * weightFactor;
     
     return value;
   };
@@ -528,15 +478,17 @@ export function Calculator() {
                   <span>Total Multiplier:</span>
                   <span className="bg-kahoot-yellow/20 text-kahoot-yellow px-2 py-0.5 rounded text-sm font-bold border border-kahoot-yellow/30">
                     x{(() => {
-                      const ADDITIVE_MULTIPLIERS = ["Gold", "Silver", "Lush", "Ripened", "Unripe"];
-                      const additiveMultipliers = selectedMultipliers.filter(m => ADDITIVE_MULTIPLIERS.includes(m.name));
-                      const multiplicativeMultipliers = selectedMultipliers.filter(m => !ADDITIVE_MULTIPLIERS.includes(m.name));
+                      const VARIANT_NAMES = ["Lush", "Ripened", "Unripe", "Gold", "Silver"];
+                      const variants = selectedMultipliers.filter(m => VARIANT_NAMES.includes(m.name));
+                      const mutations = selectedMultipliers.filter(m => !VARIANT_NAMES.includes(m.name));
                       
-                      let additiveSum = additiveMultipliers.reduce((sum, m) => sum + m.value, 0);
-                      if (additiveSum === 0) additiveSum = 1;
+                      const variantBonusSum = variants.reduce((sum, m) => sum + (m.value - 1), 0);
+                      const variantTotal = 1 + variantBonusSum;
                       
-                      const multiplicativeProduct = multiplicativeMultipliers.reduce((prod, m) => prod * m.value, 1);
-                      return (additiveSum * multiplicativeProduct).toFixed(2);
+                      const mutationBonusSum = mutations.reduce((sum, m) => sum + (m.value - 1), 0);
+                      const mutationTotal = 1 + mutationBonusSum;
+                      
+                      return (variantTotal * mutationTotal).toFixed(2);
                     })()}
                   </span>
                 </div>
