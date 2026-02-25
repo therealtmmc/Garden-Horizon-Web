@@ -90,6 +90,7 @@ export function Calculator() {
   const [inputWeight, setInputWeight] = useState('');
   const [selectedMultipliers, setSelectedMultipliers] = useState<Multiplier[]>([]);
   const [activeMultiplierId, setActiveMultiplierId] = useState('');
+  const [customMultiplierValue, setCustomMultiplierValue] = useState<string>('');
   const [isCalculating, setIsCalculating] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [showSellConfirm, setShowSellConfirm] = useState(false);
@@ -123,13 +124,35 @@ export function Calculator() {
     setSelectedPlantName(e.target.value);
   };
 
+  const handleMultiplierSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const name = e.target.value;
+    setActiveMultiplierId(name);
+    if (name === 'Ripened') {
+      setCustomMultiplierValue('2.0');
+    } else if (name === 'Unripe') {
+      setCustomMultiplierValue('1.0');
+    } else {
+      setCustomMultiplierValue('');
+    }
+  };
+
   const addMultiplier = () => {
     if (!activeMultiplierId) return;
     const multiplierDef = AVAILABLE_MULTIPLIERS.find(m => m.name === activeMultiplierId);
     if (multiplierDef && !selectedMultipliers.some(m => m.name === multiplierDef.name)) {
-      setSelectedMultipliers([...selectedMultipliers, { ...multiplierDef, id: crypto.randomUUID() }]);
+      let valueToAdd = multiplierDef.value;
+      
+      if (activeMultiplierId === 'Ripened' || activeMultiplierId === 'Unripe') {
+         const parsed = parseFloat(customMultiplierValue);
+         if (!isNaN(parsed)) {
+             valueToAdd = parsed;
+         }
+      }
+
+      setSelectedMultipliers([...selectedMultipliers, { ...multiplierDef, value: valueToAdd, id: crypto.randomUUID() }]);
     }
     setActiveMultiplierId('');
+    setCustomMultiplierValue('');
   };
 
   const removeMultiplier = (id: string) => {
@@ -325,33 +348,67 @@ export function Calculator() {
             {/* Multipliers Selection */}
             <div>
               <label className="block text-gray-500 font-bold mb-2 ml-1">Add Mutations & Weather</label>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <select
-                    value={activeMultiplierId}
-                    onChange={(e) => setActiveMultiplierId(e.target.value)}
-                    className="w-full bg-gray-100 border-2 border-gray-300 rounded-xl px-4 py-3 font-bold text-gray-700 focus:outline-none focus:border-kahoot-blue focus:ring-4 focus:ring-kahoot-blue/20 transition-all appearance-none cursor-pointer"
+              <div className="flex flex-col gap-3">
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <select
+                      value={activeMultiplierId}
+                      onChange={handleMultiplierSelect}
+                      className="w-full bg-gray-100 border-2 border-gray-300 rounded-xl px-4 py-3 font-bold text-gray-700 focus:outline-none focus:border-kahoot-blue focus:ring-4 focus:ring-kahoot-blue/20 transition-all appearance-none cursor-pointer"
+                    >
+                      <option value="">Select multiplier...</option>
+                      {AVAILABLE_MULTIPLIERS.filter(m => !selectedMultipliers.some(sm => sm.name === m.name)).map((m) => (
+                        <option key={m.name} value={m.name}>
+                          {m.emoji} {m.name} ({m.name === 'Ripened' ? '2.0x - 2.9x' : m.name === 'Unripe' ? '1.0x - 1.9x' : `${m.value}x`})
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-3.5 text-gray-400 w-5 h-5 pointer-events-none" />
+                  </div>
+                  <button
+                    onClick={addMultiplier}
+                    disabled={!activeMultiplierId}
+                    className={`px-6 rounded-xl font-bold border-b-4 transition-all flex items-center ${
+                      activeMultiplierId
+                        ? 'bg-kahoot-yellow hover:bg-yellow-400 text-white border-yellow-600 active:border-b-0 active:translate-y-1'
+                        : 'bg-gray-300 text-gray-500 border-gray-400 cursor-not-allowed'
+                    }`}
                   >
-                    <option value="">Select multiplier...</option>
-                    {AVAILABLE_MULTIPLIERS.filter(m => !selectedMultipliers.some(sm => sm.name === m.name)).map((m) => (
-                      <option key={m.name} value={m.name}>
-                        {m.emoji} {m.name} ({m.value}x)
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="absolute right-3 top-3.5 text-gray-400 w-5 h-5 pointer-events-none" />
+                    <Plus className="w-6 h-6" />
+                  </button>
                 </div>
-                <button
-                  onClick={addMultiplier}
-                  disabled={!activeMultiplierId}
-                  className={`px-6 rounded-xl font-bold border-b-4 transition-all flex items-center ${
-                    activeMultiplierId
-                      ? 'bg-kahoot-yellow hover:bg-yellow-400 text-white border-yellow-600 active:border-b-0 active:translate-y-1'
-                      : 'bg-gray-300 text-gray-500 border-gray-400 cursor-not-allowed'
-                  }`}
-                >
-                  <Plus className="w-6 h-6" />
-                </button>
+
+                {/* Custom Value Input for Ripened/Unripe */}
+                <AnimatePresence>
+                  {(activeMultiplierId === 'Ripened' || activeMultiplierId === 'Unripe') && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="bg-kahoot-yellow/10 border-2 border-kahoot-yellow/30 rounded-xl p-3 flex items-center gap-3">
+                        <div className="bg-white p-2 rounded-lg shadow-sm">
+                          {activeMultiplierId === 'Ripened' ? '🎋' : '🌱'}
+                        </div>
+                        <div className="flex-1">
+                          <label className="block text-xs font-bold text-gray-500 mb-1">
+                            {activeMultiplierId} Value ({activeMultiplierId === 'Ripened' ? '2.0 - 2.9' : '1.0 - 1.9'})
+                          </label>
+                          <input
+                            type="number"
+                            step="0.1"
+                            min={activeMultiplierId === 'Ripened' ? 2.0 : 1.0}
+                            max={activeMultiplierId === 'Ripened' ? 2.9 : 1.9}
+                            value={customMultiplierValue}
+                            onChange={(e) => setCustomMultiplierValue(e.target.value)}
+                            className="w-full bg-white border-2 border-gray-300 rounded-lg px-3 py-1.5 font-bold text-gray-700 focus:outline-none focus:border-kahoot-yellow focus:ring-2 focus:ring-kahoot-yellow/20"
+                          />
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
 
