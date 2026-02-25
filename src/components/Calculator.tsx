@@ -170,9 +170,14 @@ export function Calculator() {
       if (isNaN(weight)) return 0;
     }
 
-    // Formula: basePrice * (weight / baseWeight) ^ 2 * totalMutationMultiplier
+    // Formula: basePrice * (weight / baseWeight) ^ k * totalMutationMultiplier * plantAdjustment
     const weightRatio = weight / selectedPlantData.weight;
     
+    // Determine exponent k
+    // if ratio >= 1, k = 2
+    // else k = 5 (or plant-specific later)
+    const k = weightRatio >= 1 ? 2 : 5;
+
     // Separate additive and multiplicative multipliers
     const ADDITIVE_MULTIPLIERS = ["Gold", "Silver", "Lush", "Ripened", "Unripe"];
     
@@ -180,8 +185,6 @@ export function Calculator() {
     const multiplicativeMultipliers = selectedMultipliers.filter(m => !ADDITIVE_MULTIPLIERS.includes(m.name));
     
     // Calculate additive sum (default to 1 if none)
-    // If there are additive multipliers, we sum their values.
-    // Assuming the user means these values stack additively (e.g. 5x + 2x = 7x)
     let additiveSum = additiveMultipliers.reduce((sum, m) => sum + m.value, 0);
     if (additiveSum === 0) additiveSum = 1;
     
@@ -190,7 +193,60 @@ export function Calculator() {
     
     const totalMultiplier = additiveSum * multiplicativeProduct;
     
-    const value = selectedPlantData.price * Math.pow(weightRatio, 2) * totalMultiplier;
+    // Plant adjustment (default to 1 for now)
+    const plantAdjustment = 1;
+    
+    let value: number;
+
+    if (selectedPlantData.name === 'Cherry') {
+      // Special formula for Cherry: 
+      // Final Value = (Base * GrowthMultipliers) + Σ(Base * (EnvironmentalMultiplier − 1))
+      
+      // Calculate Base Value (Price adjusted by weight)
+      // The user's example used 8000 (Base Price), assuming standard weight.
+      // We use the weight-adjusted base value to support different weights.
+      const baseValue = selectedPlantData.price * Math.pow(weightRatio, k);
+
+      // Define Environmental Multipliers (Weather & Status Effects)
+      const ENVIRONMENTAL_MULTIPLIERS = [
+        "Sandy", "Snowy", "Flooded", "Chilled", "Soaked", "Foggy", 
+        "Muddy", "Frostbit", "Mossy"
+      ];
+      
+      // Separate multipliers
+      const envMultipliers = selectedMultipliers.filter(m => ENVIRONMENTAL_MULTIPLIERS.includes(m.name));
+      const growthMultipliers = selectedMultipliers.filter(m => !ENVIRONMENTAL_MULTIPLIERS.includes(m.name));
+      
+      // Calculate Growth Component
+      // Using the same Additive/Multiplicative logic for the Growth subset
+      const ADDITIVE_GROWTH = ["Gold", "Silver", "Lush", "Ripened", "Unripe"];
+      
+      const additiveGrowth = growthMultipliers.filter(m => ADDITIVE_GROWTH.includes(m.name));
+      const multiplicativeGrowth = growthMultipliers.filter(m => !ADDITIVE_GROWTH.includes(m.name));
+      
+      let growthAdditiveSum = additiveGrowth.reduce((sum, m) => sum + m.value, 0);
+      if (growthAdditiveSum === 0) growthAdditiveSum = 1;
+      
+      const growthMultiplicativeProduct = multiplicativeGrowth.reduce((prod, m) => prod * m.value, 1);
+      
+      const totalGrowthMultiplier = growthAdditiveSum * growthMultiplicativeProduct;
+      
+      const growthValue = baseValue * totalGrowthMultiplier;
+      
+      // Calculate Environmental Bonus
+      // Σ(Base * (EnvMultiplier − 1))
+      const envBonus = envMultipliers.reduce((sum, m) => {
+        return sum + (baseValue * (m.value - 1));
+      }, 0);
+      
+      value = growthValue + envBonus;
+      
+      // Ensure value doesn't drop below 0
+      if (value < 0) value = 0;
+    } else {
+      // Standard formula for other plants
+      value = selectedPlantData.price * Math.pow(weightRatio, k) * totalMultiplier * plantAdjustment;
+    }
     
     return value;
   };
