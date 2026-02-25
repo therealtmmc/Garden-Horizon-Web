@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { Sprout } from 'lucide-react';
+import { RestockTimer } from './RestockTimer';
 
 export function Header() {
   const [imageError, setImageError] = useState(false);
 
   return (
-    <header className="w-full p-4 flex justify-center items-center">
+    <header className="w-full p-4 flex justify-center items-center pb-8">
       <div className="relative group cursor-pointer transform hover:scale-105 transition-transform duration-300 w-full max-w-[400px]">
         {/* Logo Container */}
-        <div className="bg-white/90 backdrop-blur-sm border-4 border-farm-dark-green rounded-3xl p-4 shadow-[0_8px_0_rgba(45,106,54,1)] flex items-center justify-center w-full min-h-[80px] md:min-h-[100px]">
+        <div className="bg-white/90 backdrop-blur-sm border-4 border-farm-dark-green rounded-3xl p-4 shadow-[0_8px_0_rgba(45,106,54,1)] flex items-center justify-center w-full min-h-[80px] md:min-h-[100px] relative z-10">
            {!imageError ? (
              <img 
                src="/logo.png" 
@@ -32,6 +33,9 @@ export function Header() {
              </div>
            )}
         </div>
+        
+        {/* Restock Timer */}
+        <RestockTimer />
       </div>
     </header>
   );
