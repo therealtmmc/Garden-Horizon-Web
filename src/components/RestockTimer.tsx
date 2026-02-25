@@ -10,6 +10,11 @@ export function RestockTimer() {
   const lastTriggeredTime = useRef<number>(0);
 
   useEffect(() => {
+    // Request notification permission on mount
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+
     // Initialize audio
     audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/221/221-preview.mp3'); // Simple bell sound
     audioRef.current.volume = 0.5;
@@ -63,6 +68,15 @@ export function RestockTimer() {
       if (audioRef.current) {
         audioRef.current.currentTime = 0;
         audioRef.current.play().catch(e => console.log("Audio play failed:", e));
+      }
+
+      // Send Browser Notification
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('Garden Horizon Restock!', {
+          body: 'New plants are available in the shop now!',
+          icon: '/logo.png', // Uses the public logo if available, or fallback
+          silent: true // We play our own sound
+        });
       }
 
       // Hide popup after 5 seconds
